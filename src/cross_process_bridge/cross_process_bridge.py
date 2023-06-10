@@ -76,7 +76,10 @@ class CrossProcessBridge(metaclass=CrossProcessMetaclass):
         self.stop()
 
     def __setattr__(self, key, value):
-        if key in self.__dict__ or 'process' not in self.__dict__ or self.process is None or not self.process.is_alive():
+        if (key in self.__dict__ or
+                'process' not in self.__dict__ or
+                self.process is None or
+                not self.process.is_alive()):
             return super().__setattr__(key, value)
 
         return self.custom_setattr(key, value)
