@@ -1,4 +1,4 @@
-# Cross Process
+# Cross Process Bridge
 
 This package is a utility for creating an instance of a class in a new process and seamlessly calling its functions from
 the original process  
