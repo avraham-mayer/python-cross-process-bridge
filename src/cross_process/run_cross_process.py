@@ -9,14 +9,25 @@ def run_cross_process(task_queue: Queue, response_queue: Queue, instance_generat
     while True:
         task: TaskRequest = task_queue.get()
         if task.func_name == 'start' and instance is None:
-            instance = instance_generator.generate()
+            try:
+                instance = instance_generator.generate()
+            except Exception as e:
+                response_queue.put(TaskResult(None, e))
+                continue
+
             if hasattr(instance, 'start') and callable(getattr(instance, 'start')):
                 instance.start(*task.args, **task.kwargs)
+
             response_queue.put(TaskResult(None, None))
             continue
         elif task.func_name == 'stop':
             if hasattr(instance, 'stop') and callable(getattr(instance, 'stop')):
-                instance.stop(*task.args, **task.kwargs)
+                try:
+                    instance.stop(*task.args, **task.kwargs)
+                except Exception as e:
+                    response_queue.put(TaskResult(None, e))
+                    return
+
             response_queue.put(TaskResult(None, None))
             return
 

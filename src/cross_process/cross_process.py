@@ -8,24 +8,24 @@ from cross_process.run_cross_process import run_cross_process
 class CrossProcessMetaclass(type):
 
     def __new__(cls, name, bases, dct):
-        if name == 'CrossProcess':
+        if name == 'CrossProcessBridge':
             return super().__new__(cls, name, bases, dct)
 
-        if bases[1] is not CrossProcess:
-            raise Exception('must inherit from CrossProcess second')
+        if bases[1] is not CrossProcessBridge:
+            raise Exception('must inherit from CrossProcessBridge second')
         if len(bases) != 2:
-            raise Exception('must have exactly one base other than CrossProcess')
+            raise Exception('must have exactly one base other than CrossProcessBridge')
 
         real_base = bases[0]
         for key, value in real_base.__dict__.items():
             if callable(value) and key not in ('__init__', 'start', 'stop'):
-                dct[key] = CrossProcess.create_cross_process_function(item=key)
+                dct[key] = CrossProcessBridge.create_cross_process_function(item=key)
 
         dct['real_base'] = real_base
-        return super().__new__(cls, name, (CrossProcess, real_base), dct)
+        return super().__new__(cls, name, (CrossProcessBridge, real_base), dct)
 
 
-class CrossProcess(metaclass=CrossProcessMetaclass):
+class CrossProcessBridge(metaclass=CrossProcessMetaclass):
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
@@ -40,7 +40,9 @@ class CrossProcess(metaclass=CrossProcessMetaclass):
                                    args=(self.task_queue, self.response_queue, instance_creator))
             self.process.start()
         self.task_queue.put(TaskRequest('start', *args, **kwargs))
-        self.response_queue.get()
+        result: TaskResult = self.response_queue.get()
+        if result.exception is not None:
+            raise result.exception
 
     def stop(self, *args, **kwargs):
         if self.process is not None and self.process.is_alive():
@@ -51,7 +53,7 @@ class CrossProcess(metaclass=CrossProcessMetaclass):
 
     @staticmethod
     def create_cross_process_function(item):
-        def cross_process_function(self: CrossProcess, *args, **kwargs):
+        def cross_process_function(self: CrossProcessBridge, *args, **kwargs):
             self.task_queue.put(TaskRequest(item, *args, **kwargs))
             result: TaskResult = self.response_queue.get()
             if result.exception is not None:
