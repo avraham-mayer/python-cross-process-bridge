@@ -39,28 +39,29 @@ class A:
 and let's further assume, that I didn't just create this class to check whether what i did worked, and say we just
 really want to run an instance of this class in another process for completely unrelated reasons  
   
-The module exports a class `CrossProcess` which must be inherited from in order to run in another process  
+The module exports a class `CrossProcessBridge` which must be inherited from in order to run in another process  
   
 If, for example I want to run an instance of the `A` class in a separate process:  
-I will create a new class, in this case `B` which will inherit from both `A` and from `CrossProcess`
+I will create a new class, in this case `B` which will inherit from both `A` and from `CrossProcessBridge`
   
-**important** - the new class must inherit first from your class - `A` in this example - and then `CrossProcess`  
+**important** - the new class must inherit first from your class - `A` in this example - and then `CrossProcessBridge`  
 
 ```python
-class B(A, CrossProcess):
+class B(A, CrossProcessBridge):
     pass
 ```
-after creating an instance of `B` I will then call the `start()` method from the `CrossProcess` class - this will create
-another process, and in it create an instance of `A` **importantly, not of `B`**! it will create an instance of the
-original `A` class  
+after creating an instance of `B` I will then call the `start()` method from the `CrossProcessBridge` class - this will
+create another process, and in it create an instance of `A` **importantly, not of `B`**! it will create an instance of
+the original `A` class  
 I can now call any methods that exist in the `A` class on the `B` instance I have created and they will be called in the
 new process.  
 when I am done i can call `stop()` which will stop the process
 
 #### Complete example:
+
 ```python
 import os
-from cross_process.cross_process import CrossProcess
+from cross_process.cross_process import CrossProcessBridge
 
 
 class A:
@@ -68,15 +69,15 @@ class A:
         print('a', os.getpid())
 
 
-class B(A, CrossProcess):
+class B(A, CrossProcessBridge):
     pass
 
 
 if __name__ == '__main__':
     pid = os.getpid()
     print(pid)  # print the pid of the original process
-    b = B()     # create the bridge instance
-    b.start()   # start the process and create an instance in it
-    b.a()       # call the `a()` function - will print a different pid
-    b.stop()    # stop the process
+    b = B()  # create the bridge instance
+    b.start()  # start the process and create an instance in it
+    b.a()  # call the `a()` function - will print a different pid
+    b.stop()  # stop the process
 ```

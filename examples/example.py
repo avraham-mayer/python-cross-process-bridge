@@ -1,6 +1,6 @@
 import os
 
-from cross_process.cross_process import CrossProcess
+from cross_process import CrossProcessBridge
 
 
 class A:
@@ -12,7 +12,7 @@ class A:
         print('a', os.getpid())
 
 
-class B(A, CrossProcess):
+class B(A, CrossProcessBridge):
     pass
 
 
