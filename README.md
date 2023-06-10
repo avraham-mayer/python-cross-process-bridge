@@ -61,7 +61,7 @@ when I am done i can call `stop()` which will stop the process
 
 ```python
 import os
-from cross_process_bridge.cross_process_bridge import CrossProcessBridge
+from cross_process_bridge import CrossProcessBridge
 
 
 class A:
