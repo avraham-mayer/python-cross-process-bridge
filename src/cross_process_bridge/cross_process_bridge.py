@@ -16,6 +16,12 @@ class CrossProcessMetaclass(type):
             if b is not object:
                 cls._insert_wrapper_functions(dct, b)
 
+    @staticmethod
+    def _set_up_attribute_methods(dct):
+        dct['__getattr__'] = CrossProcessBridge.create_cross_process_function('__getattribute__')
+        custom_setattr = CrossProcessBridge.create_cross_process_function('__setattr__')
+        dct['custom_setattr'] = custom_setattr
+
     def __new__(cls, name, bases, dct):
         if name == 'CrossProcessBridge':
             return super().__new__(cls, name, bases, dct)
@@ -27,6 +33,7 @@ class CrossProcessMetaclass(type):
 
         real_base = bases[0]
         cls._insert_wrapper_functions(dct, real_base)
+        CrossProcessMetaclass._set_up_attribute_methods(dct)
 
         dct['real_base'] = real_base
         return super().__new__(cls, name, (CrossProcessBridge, real_base), dct)
@@ -71,3 +78,9 @@ class CrossProcessBridge(metaclass=CrossProcessMetaclass):
 
     def __del__(self):
         self.stop()
+
+    def __setattr__(self, key, value):
+        if key in self.__dict__ or 'process' not in self.__dict__ or self.process is None or not self.process.is_alive():
+            return super().__setattr__(key, value)
+
+        return self.custom_setattr(key, value)
