@@ -1,20 +1,25 @@
-import os
 from multiprocessing import Queue, Process
+from typing import Type
 
-from cross_process_runnable import CrossProcessRunnable
-from models import TaskResult, TaskRequest
-from run_cross_process import run_cross_process
+from cross_process.instance_creator import InstanceCreator
+from cross_process.models import TaskResult, TaskRequest
+from cross_process.run_cross_process import run_cross_process
 
 
-class CrossProcessCommunicator:
-    def __init__(self, instance):
-        self.instance = instance
+class CrossProcessRunner:
+    def __init__(self, instance_creator: InstanceCreator):
+        self.instance_creator = instance_creator
         self.task_queue = Queue()
         self.response_queue = Queue()
         self.process: Process = None
 
+    @classmethod
+    def type(cls, instance_type: Type, *args, **kwargs):
+        return cls(InstanceCreator(instance_type, *args, **kwargs))
+
     def start(self):
-        self.process = Process(target=run_cross_process, args=(self.instance, self.task_queue, self.response_queue))
+        self.process = Process(target=run_cross_process,
+                               args=(self.task_queue, self.response_queue, self.instance_creator))
         self.process.start()
         self.task_queue.put(TaskRequest('start'))
         self.response_queue.get()
@@ -31,12 +36,5 @@ class CrossProcessCommunicator:
             if result.exception is not None:
                 raise result.exception
             return result.retval
+
         return cross_process_function
-
-
-if __name__ == '__main__':
-    print(os.getpid())
-    c = CrossProcessCommunicator(CrossProcessRunnable())
-    c.start()
-    c.do_something()
-    c.stop()
