@@ -2,13 +2,18 @@
 
 This package is a utility for creating an instance of a class in a new process and seamlessly calling its functions from
 the original process  
-  
-## Background
-### multiprocessing
-let's say I have a class that needs to do something that affects the whole process - for example changing the working 
-directory, using setuid, or any other action that cannot be done in a thread without affecting the rest of the process  
 
-The module `multiprocessing` module allows running a python function in a separate process using
+## When would I ever want to do that?
+Good question, I'm glad you asked.  
+Let's say you have a class, that changes the `cwd` of the program during the course of its actions. If you have another 
+thread running, which needs a different `cwd`, they will interfere with each other because threads share a `cwd`  
+  
+Another example would be if you have a process running as root, which needs to do something risky that you wouldn't want
+a privileged user doing, or just doesn't need high privileges. With this module you could call `os.setuid()` in the
+child process without dropping privileges in the main process.
+  
+## So why wouldn't I just use multiprocessing?
+The `multiprocessing` module allows running a python function in a separate process using
 `multiprocessing.Process` like this:  
 ```python
 process = multiprocessing.Process(target=func_to_run, args=(args, to, send))
@@ -19,10 +24,8 @@ process.join()
 
 ### why multiprocessing isn't enough 
 The above example will run the function `func_to_run` with the given arguments. the program can then do other things and
-wait for the process using `process.join()` when it needs to  
-  
-however, even if the `func_to_run` creates an instance of a class, this does not allow calling functions of that class
-from the main process - it only runs the `func_to_run` and then exits
+wait for the process using `process.join()` when it needs to.  
+However, it only runs the `func_to_run` and then exits.
 
 ## Cross Process Class
 This module allows creating an instance of a class in one process and then seamlessly calling its functions from the 
@@ -81,3 +84,103 @@ if __name__ == '__main__':
     b.a()       # call the `a()` function - will print a different pid
     b.stop()    # stop the process
 ```
+
+### Pitfalls
+
+#### Memory space
+As with anything involving multiprocessing, a significant pitfall is separate memory spaces.  
+for example:
+```python
+class A:
+    def add_to_list(self, lst):
+        lst.append('a')
+
+
+class B(A, CrossProcessBridge):
+    pass
+
+
+def main():
+    b = B()
+    b.start()
+
+    lst = []
+    b.add_to_list(lst)
+    print(lst)
+
+    b.stop()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+in this example the `A` class has a method `add_to_list` which gets a list and adds an `'a'` to it.  
+the `print` in the line after the function call, will output an empty list because the lst object in memory in the main 
+process is not the same list in the child process - it is copied into it when it is passed as a variable but changes to
+it will not be reflected in the main process.  
+The `multiprocessing.Manager` class can share simple objects including lists between processes:
+```python
+from multiprocessing import Manager
+
+from cross_process_bridge import CrossProcessBridge
+
+
+class A:
+    def add_to_list(self, lst):
+        lst.append('a')
+
+
+class B(A, CrossProcessBridge):
+    pass
+
+
+def main():
+    with B() as b:
+        lst = Manager().list()
+        b.add_to_list(lst)
+        print(lst)
+
+
+if __name__ == '__main__':
+    main()
+```
+in this example, appending `'a'` to the list _is_ reflected in the main process because the list is a proxy object 
+handled by `multiprocessing.Manager`
+
+#### Method call-through
+if your class has methods called `start` or `stop`, they will be called when starting and stopping the process - this is
+to allow any setup and teardown you want to do. you _can_ pass parameters to the start and stop methods, but it is 
+recommended that they have no parameters for simplicity and because when using the `with` keyword on the class, 
+`start()` and `stop()` are called with no parameters
+
+
+### Other usages
+
+in addition to the classic usage above, the class can also be used as a context manager using the `with` keyword:
+```python
+import os
+from cross_process_bridge import CrossProcessBridge
+
+
+class A:
+    @staticmethod
+    def a():
+        print('a', os.getpid())
+
+
+class B(A, CrossProcessBridge):
+    pass
+
+
+def main():
+    pid = os.getpid()
+    print(pid)
+    with B() as b:
+        b.a()
+
+
+if __name__ == '__main__':
+    main()
+```
+when entering the `with` block the `start()` method will be called and when exiting, the `stop()` method will be called.
