@@ -30,7 +30,7 @@ class C(B, CrossProcessBridge):
     pass
 
 
-if __name__ == '__main__':
+def main():
     print('original process', os.getpid())
     c = C('b')
     c.start()
@@ -39,3 +39,7 @@ if __name__ == '__main__':
     print(bool(c))
     print(c)
     c.stop()
+
+
+if __name__ == '__main__':
+    main()

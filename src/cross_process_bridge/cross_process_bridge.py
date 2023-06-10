@@ -68,3 +68,6 @@ class CrossProcessBridge(metaclass=CrossProcessMetaclass):
             return result.retval
 
         return cross_process_function
+
+    def __del__(self):
+        self.stop()
