@@ -7,5 +7,5 @@ class InstanceCreator:
         self.instance_args = instance_args
         self.instance_kwargs = instance_kwargs
 
-    def generate(self):
+    def create(self):
         return self.instance_function(*self.instance_args, **self.instance_kwargs)
