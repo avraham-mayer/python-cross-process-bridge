@@ -4,11 +4,12 @@ from cross_process_bridge import CrossProcessBridge
 
 
 class A:
-    def a(self):
+    @staticmethod
+    def a():
         print('a', os.getpid())
 
     def __str__(self):
-        return f'AAAAAA {os.getpid()}'
+        return f'A.__str__ {os.getpid()}'
 
 
 class B(A):
@@ -16,7 +17,8 @@ class B(A):
         self.thing = thing
         print(f'B __init__ {thing}', os.getpid())
 
-    def b(self):
+    @staticmethod
+    def b():
         print('b', os.getpid())
 
     def __bool__(self):

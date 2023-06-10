@@ -29,14 +29,14 @@ This module allows creating an instance of a class in one process and then seaml
 main process
 
 ### Example
-let's say i have a class `A` which has a method `a` which prints the pid of the process in which it is running
+let's say I have a class `A` which has a method `a` which prints the pid of the process in which it is running
 ```python
 class A:
     def a(self):
         print('a', os.getpid())
 ```
 
-and let's further assume, that I didn't just create this class to check whether what i did worked, and say we just
+and let's further assume, that I didn't just create this class to check whether what I did worked, and say we just
 really want to run an instance of this class in another process for completely unrelated reasons  
   
 The module exports a class `CrossProcessBridge` which must be inherited from in order to run in another process  
@@ -53,9 +53,9 @@ class B(A, CrossProcessBridge):
 after creating an instance of `B` I will then call the `start()` method from the `CrossProcessBridge` class - this will
 create another process, and in it create an instance of `A` **importantly, not of `B`**! it will create an instance of
 the original `A` class  
-I can now call any methods that exist in the `A` class on the `B` instance I have created and they will be called in the
+I can now call any methods that exist in the `A` class on the `B` instance I have created, and they will be called in the
 new process.  
-when I am done i can call `stop()` which will stop the process
+when I am done I can call `stop()` which will stop the process
 
 #### Complete example:
 

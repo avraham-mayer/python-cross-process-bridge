@@ -3,7 +3,8 @@ from cross_process_bridge import CrossProcessBridge
 
 
 class A:
-    def a(self):
+    @staticmethod
+    def a():
         print('a', os.getpid())
 
 
