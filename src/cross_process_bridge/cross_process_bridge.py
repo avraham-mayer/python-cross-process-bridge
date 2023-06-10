@@ -1,3 +1,4 @@
+import os
 from multiprocessing import Queue, Process
 
 from cross_process_bridge.instance_creator import InstanceCreator
@@ -6,6 +7,14 @@ from cross_process_bridge.run_cross_process import run_cross_process
 
 
 class CrossProcessMetaclass(type):
+    @classmethod
+    def _insert_wrapper_functions(cls, dct, base):
+        for key, value in base.__dict__.items():
+            if callable(value) and key not in ('__init__', 'start', 'stop'):
+                dct[key] = CrossProcessBridge.create_cross_process_function(item=key)
+        for b in base.__bases__:
+            if b is not object:
+                cls._insert_wrapper_functions(dct, b)
 
     def __new__(cls, name, bases, dct):
         if name == 'CrossProcessBridge':
@@ -17,9 +26,7 @@ class CrossProcessMetaclass(type):
             raise Exception('must have exactly one base other than CrossProcessBridge')
 
         real_base = bases[0]
-        for key, value in real_base.__dict__.items():
-            if callable(value) and key not in ('__init__', 'start', 'stop'):
-                dct[key] = CrossProcessBridge.create_cross_process_function(item=key)
+        cls._insert_wrapper_functions(dct, real_base)
 
         dct['real_base'] = real_base
         return super().__new__(cls, name, (CrossProcessBridge, real_base), dct)
