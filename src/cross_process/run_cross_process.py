@@ -1,47 +1,58 @@
 from multiprocessing import Queue
-from typing import Tuple, Type
+from typing import Tuple, Any
 
 from cross_process.instance_creator import InstanceCreator
 from cross_process.models import TaskRequest, TaskResult
 
 
-def create_instance(instance_creator: InstanceCreator, task: TaskRequest) -> Tuple[..., TaskResult]:
-    try:
+class ChildProcessBridge:
+    def __init__(self, task_queue: Queue, response_queue: Queue, instance_creator: InstanceCreator):
+        self.task_queue = task_queue
+        self.response_queue = response_queue
+        self.instance_creator = instance_creator
+        self.instance = None
+
+    def create_instance(self, task: TaskRequest) -> TaskResult:
+        try:
+            retval = None
+            self.instance = self.instance_creator.create()
+            if hasattr(self.instance, 'start') and callable(getattr(self.instance, 'start')):
+                retval = self.instance.start(*task.args, **task.kwargs)
+            return TaskResult(retval, None)
+        except Exception as e:
+            return TaskResult(None, e)
+
+    def run_method(self, task) -> TaskResult:
         retval = None
-        instance = instance_creator.create()
-        if hasattr(instance, 'start') and callable(getattr(instance, 'start')):
-            retval = instance.start(*task.args, **task.kwargs)
-        return instance, TaskResult(retval, None)
-    except Exception as e:
-        return None, TaskResult(None, e)
+        exception = None
+        try:
+            retval = self.instance.__getattribute__(task.func_name)(*task.args, **task.kwargs)
+        except Exception as e:
+            exception = e
+        return TaskResult(retval, exception)
 
+    def run(self):
+        while True:
+            task: TaskRequest = self.task_queue.get()
+            if task.func_name == 'start' and self.instance is None:
+                result = self.create_instance(task)
+                self.response_queue.put(result)
+                continue
+            elif task.func_name == 'stop':
+                if hasattr(self.instance, 'stop') and callable(getattr(self.instance, 'stop')):
+                    result = self.run_method(task)
+                else:
+                    result = TaskResult(None, None)
+                self.response_queue.put(result)
+                return
 
-def run_method(instance, task) -> TaskResult:
-    retval = None
-    exception = None
-    try:
-        retval = instance.__getattribute__(task.func_name)(*task.args, **task.kwargs)
-    except Exception as e:
-        exception = e
-    return TaskResult(retval, exception)
+            if self.instance is None:
+                continue
+
+            result = self.run_method(task)
+            self.response_queue.put(result)
 
 
 def run_cross_process(task_queue: Queue, response_queue: Queue, instance_creator: InstanceCreator):
-    instance = None
-    while True:
-        task: TaskRequest = task_queue.get()
-        if task.func_name == 'start' and instance is None:
-            instance, result = create_instance(instance_creator, task)
-            response_queue.put(result)
-            continue
-        elif task.func_name == 'stop':
-            if hasattr(instance, 'stop') and callable(getattr(instance, 'stop')):
-                result = run_method(instance, task)
-                response_queue.put(result)
-            return
-
-        if instance is None:
-            continue
-
-        result = run_method(instance, task)
-        response_queue.put(result)
+    bridge = ChildProcessBridge(task_queue, response_queue, instance_creator)
+    bridge.run()
