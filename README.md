@@ -68,7 +68,8 @@ from cross_process_bridge import CrossProcessBridge
 
 
 class A:
-    def a(self):
+    @staticmethod
+    def a():
         print('a', os.getpid())
 
 
@@ -76,13 +77,17 @@ class B(A, CrossProcessBridge):
     pass
 
 
-if __name__ == '__main__':
+def main():
     pid = os.getpid()
     print(pid)  # print the pid of the original process
     b = B()     # create the bridge instance
     b.start()   # start the process and create an instance in it
     b.a()       # call the `a()` function - will print a different pid
     b.stop()    # stop the process
+
+
+if __name__ == '__main__':
+    main()
 ```
 
 ### Pitfalls
@@ -116,7 +121,7 @@ if __name__ == '__main__':
 ```
 
 in this example the `A` class has a method `add_to_list` which gets a list and adds an `'a'` to it.  
-the `print` in the line after the function call, will output an empty list because the lst object in memory in the main 
+the `print` in the line after the function call, will output an empty list because the `lst` object in memory in the main 
 process is not the same list in the child process - it is copied into it when it is passed as a variable but changes to
 it will not be reflected in the main process.  
 The `multiprocessing.Manager` class can share simple objects including lists between processes:
