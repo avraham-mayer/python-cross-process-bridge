@@ -3,7 +3,7 @@ from multiprocessing import Queue, Process
 
 from cross_process_bridge.instance_creator import InstanceCreator
 from cross_process_bridge.models import TaskResult, TaskRequest
-from cross_process_bridge.run_cross_process import run_cross_process
+from cross_process_bridge.child_process_bridge import run_cross_process
 
 
 class CrossProcessMetaclass(type):
