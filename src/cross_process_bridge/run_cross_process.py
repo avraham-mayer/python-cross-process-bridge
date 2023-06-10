@@ -1,8 +1,8 @@
 from multiprocessing import Queue
 from typing import Tuple, Any
 
-from cross_process.instance_creator import InstanceCreator
-from cross_process.models import TaskRequest, TaskResult
+from cross_process_bridge.instance_creator import InstanceCreator
+from cross_process_bridge.models import TaskRequest, TaskResult
 
 
 class ChildProcessBridge:

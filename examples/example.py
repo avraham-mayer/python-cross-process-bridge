@@ -1,6 +1,6 @@
 import os
 
-from cross_process import CrossProcessBridge
+from cross_process_bridge import CrossProcessBridge
 
 
 class C:
