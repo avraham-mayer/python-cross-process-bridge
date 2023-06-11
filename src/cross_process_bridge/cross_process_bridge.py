@@ -8,9 +8,16 @@ from cross_process_bridge.models import TaskResult, TaskRequest
 
 class CrossProcessMetaclass(type):
     @classmethod
+    def _should_wrap(cls, key, value):
+        if key in ('__init__', 'start', 'stop'):
+            return False
+        
+        return callable(value) or (hasattr(value, '__func__') and callable(value.__func__))
+        
+    @classmethod
     def _insert_wrapper_functions(cls, dct, base):
         for key, value in base.__dict__.items():
-            if callable(value) and key not in ('__init__', 'start', 'stop'):
+            if cls._should_wrap(key, value):
                 dct[key] = CrossProcessBridge.create_cross_process_function(item=key)
         for b in base.__bases__:
             if b is not object:
