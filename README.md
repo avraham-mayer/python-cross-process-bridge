@@ -11,6 +11,10 @@ thread running, which needs a different `cwd`, they will interfere with each oth
 Another example would be if you have a process running as root, which needs to do something risky that you wouldn't want
 a privileged user doing, or just doesn't need high privileges. With this module you could call `os.setuid()` in the
 child process without dropping privileges in the main process.
+
+In particular, this module is useful for a situation where the use of your class is intertwined with the rest of your 
+code to a point which would make it difficult to separate. In that case, simple replace the creation of instances with 
+transformed instances using this module and every instance will have its own process where its methods execute.
   
 ## So why wouldn't I just use multiprocessing?
 The `multiprocessing` module allows running a python function in a separate process using
